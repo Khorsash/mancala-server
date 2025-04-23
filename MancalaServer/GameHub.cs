@@ -27,8 +27,7 @@ namespace MancalaServer
 
             if (session.Player1 != null && session.Player2 != null)
             {
-                await Clients.Group(sessionId).SendAsync("GameState", string.Join(",", session.GameState));
-                await Clients.Client(session.GetCurrentPlayerConnectionId()).SendAsync("CanMove");
+                 await Clients.Group(sessionId).SendAsync("GameState", string.Join(",", session.GameState)+",");
             }
             else
             {
@@ -45,20 +44,16 @@ namespace MancalaServer
                 await Clients.Caller.SendAsync("Error", "Not your turn");
                 return;
             }
-
+            string moveForHistory = session.GetPlayerRole(session.GetCurrentPlayerConnectionId()) == "1" 
+                                    ? move 
+                                    : Convert.ToString(Convert.ToInt16(move)+7);
             session.MakeMove(move);
-
-            await Clients.Group(sessionId).SendAsync("GameState", string.Join(",", session.GameState));
+            await Clients.Group(sessionId).SendAsync("GameState", string.Join(",", session.GameState)+","+moveForHistory);
 
             if (session.IsGameOver)
             {
                 await Clients.Group(sessionId).SendAsync("GameOver", session.GetWinner());
                 GameManager.Sessions.Remove(sessionId);
-            }
-            else
-            {
-                await Clients.Client(session.GetCurrentPlayerConnectionId()).SendAsync("CanMove");
-                await Clients.Group(sessionId).SendAsync("MadeMove", move);
             }
         }
 
@@ -69,6 +64,7 @@ namespace MancalaServer
                 if (session.Player1 == Context.ConnectionId || session.Player2 == Context.ConnectionId)
                 {
                     await Clients.Group(session.SessionId).SendAsync("GameOver", "Opponent disconnected.");
+                    GameManager.Sessions.Remove(session.SessionId);
                 }
             }
 
