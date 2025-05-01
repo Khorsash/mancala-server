@@ -13,9 +13,11 @@ namespace MancalaServer
             foreach(var sessionId in GameManager.Sessions.Keys)
             {
                 session = GameManager.Sessions[sessionId];
-                Console.WriteLine(sessionId);
-                Console.WriteLine(session.Player1 == null);
-                Console.WriteLine(session.Player2 == null);
+                if(!session.isPublic) 
+                {continue;}
+                // Console.WriteLine(sessionId);
+                // Console.WriteLine(session.Player1 == null);
+                // Console.WriteLine(session.Player2 == null);
                 if(GameManager.Sessions[sessionId].AddPlayer(Context.ConnectionId))
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);
@@ -33,7 +35,7 @@ namespace MancalaServer
             }
             string sessionId2 = Guid.NewGuid().ToString("N").Substring(0, 16);
             while(GameManager.Sessions.ContainsKey(sessionId2)) sessionId2 = Guid.NewGuid().ToString("N").Substring(0, 32);
-            session = new GameSession(sessionId2);
+            session = new GameSession(sessionId2, true);
             GameManager.Sessions[sessionId2] = session;
             await Groups.AddToGroupAsync(Context.ConnectionId, sessionId2);
             role = session.GetPlayerRole(Context.ConnectionId);
@@ -64,11 +66,11 @@ namespace MancalaServer
                 await Clients.Group(sessionId).SendAsync("GameState", string.Join(",", session.GameState)+",");
             }
         }
-        public async Task CreateGame(string sessionID)
+        public async Task CreateGame(string sessionID, string publicity)
         {
             string sessionId = sessionID == "" ? Guid.NewGuid().ToString("N").Substring(0, 16) : sessionID;
             while(GameManager.Sessions.ContainsKey(sessionId)) sessionId = Guid.NewGuid().ToString("N").Substring(0, 32);
-            GameSession session = new GameSession(sessionId);
+            GameSession session = new GameSession(sessionId, publicity == "True");
             GameManager.Sessions[sessionId] = session;
             session.AddPlayer(Context.ConnectionId);
             await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);

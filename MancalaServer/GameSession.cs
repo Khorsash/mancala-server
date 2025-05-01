@@ -69,9 +69,11 @@ namespace MancalaServer
         public string? Player2 { get; private set; }
         public int[] GameState { get; private set; }
         public bool IsGameOver { get; private set; }
+        public bool isPublic {get; private set;}
 
-        public GameSession(string sessionId)
+        public GameSession(string sessionId, bool publicity)
         {
+            isPublic = publicity;
             GameState = new int[15] {4, 4, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4, 0, 1};
             SessionId = sessionId;
             IsGameOver = false;
