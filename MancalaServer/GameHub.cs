@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 
@@ -6,6 +7,18 @@ namespace MancalaServer
 {
     public class GameHub : Hub
     {
+        public async Task ListPublicGames()
+        {
+            List<string> avaliableGames = new List<string>();
+            foreach(var sessionId in GameManager.Sessions.Keys)
+            {
+                if(GameManager.Sessions[sessionId].isPublic && !GameManager.Sessions[sessionId].IsGameFull()) 
+                {
+                    avaliableGames.Add(sessionId);
+                }
+            }
+            await Clients.Caller.SendAsync("AvaliableGames", string.Join(",", avaliableGames));
+        }
         public async Task QuickGame()
         {
             GameSession session;
@@ -15,9 +28,6 @@ namespace MancalaServer
                 session = GameManager.Sessions[sessionId];
                 if(!session.isPublic) 
                 {continue;}
-                // Console.WriteLine(sessionId);
-                // Console.WriteLine(session.Player1 == null);
-                // Console.WriteLine(session.Player2 == null);
                 if(GameManager.Sessions[sessionId].AddPlayer(Context.ConnectionId))
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);
@@ -69,6 +79,8 @@ namespace MancalaServer
         public async Task CreateGame(string sessionID, string publicity)
         {
             string sessionId = sessionID == "" ? Guid.NewGuid().ToString("N").Substring(0, 16) : sessionID;
+            if(GameManager.Sessions.ContainsKey(sessionId))
+            {await Clients.Caller.SendAsync("Error", "Game with that id already exists");}
             while(GameManager.Sessions.ContainsKey(sessionId)) sessionId = Guid.NewGuid().ToString("N").Substring(0, 32);
             GameSession session = new GameSession(sessionId, publicity == "True");
             GameManager.Sessions[sessionId] = session;

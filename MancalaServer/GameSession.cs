@@ -94,6 +94,11 @@ namespace MancalaServer
             return false;
         }
 
+        public bool IsGameFull()
+        {
+            return Player1 != null && Player2 != null;
+        }
+
         public bool CanMakeMove(string connectionId)
         {
             return (GameState[GameState.Length-1] == 1 && connectionId == Player1) ||
