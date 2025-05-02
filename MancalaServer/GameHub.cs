@@ -26,12 +26,13 @@ namespace MancalaServer
             foreach(var sessionId in GameManager.Sessions.Keys)
             {
                 session = GameManager.Sessions[sessionId];
+
                 if(!session.isPublic) 
                 {continue;}
                 if(GameManager.Sessions[sessionId].AddPlayer(Context.ConnectionId))
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);
-
+                    GameManager.Sessions[sessionId].AddPlayer(Context.ConnectionId);
                     role = session.GetPlayerRole(Context.ConnectionId);
                     await Clients.Caller.SendAsync("sessionID", sessionId);
                     await Clients.Caller.SendAsync("Role", role);
@@ -43,12 +44,14 @@ namespace MancalaServer
                     return;
                 }
             }
-            string sessionId2 = Guid.NewGuid().ToString("N").Substring(0, 16);
+            string sessionId2 = Guid.NewGuid().ToString("N").Substring(0, 32);
             while(GameManager.Sessions.ContainsKey(sessionId2)) sessionId2 = Guid.NewGuid().ToString("N").Substring(0, 32);
             session = new GameSession(sessionId2, true);
             GameManager.Sessions[sessionId2] = session;
             await Groups.AddToGroupAsync(Context.ConnectionId, sessionId2);
+            session.AddPlayer(Context.ConnectionId);
             role = session.GetPlayerRole(Context.ConnectionId);
+            await Clients.Caller.SendAsync("sessionID", sessionId2);
             await Clients.Caller.SendAsync("Role", role);
             await Clients.Caller.SendAsync("WaitingForOpponent", sessionId2);
         }
@@ -78,7 +81,7 @@ namespace MancalaServer
         }
         public async Task CreateGame(string sessionID, string publicity)
         {
-            string sessionId = sessionID == "" ? Guid.NewGuid().ToString("N").Substring(0, 16) : sessionID;
+            string sessionId = sessionID == "" ? Guid.NewGuid().ToString("N").Substring(0, 32) : sessionID;
             if(GameManager.Sessions.ContainsKey(sessionId))
             {await Clients.Caller.SendAsync("Error", "Game with that id already exists");}
             while(GameManager.Sessions.ContainsKey(sessionId)) sessionId = Guid.NewGuid().ToString("N").Substring(0, 32);
