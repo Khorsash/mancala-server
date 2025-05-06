@@ -14,12 +14,12 @@ namespace MancalaServer
             {
                 if(GameManager.Sessions[sessionId].isPublic && !GameManager.Sessions[sessionId].IsGameFull()) 
                 {
-                    avaliableGames.Add(sessionId);
+                    avaliableGames.Add(GameManager.Sessions[sessionId].Player1Nickname ?? "Anonymous"+"'s game("+sessionId+")");
                 }
             }
             await Clients.Caller.SendAsync("AvaliableGames", string.Join(",", avaliableGames));
         }
-        public async Task QuickGame()
+        public async Task QuickGame(string nickname="Anonymous")
         {
             GameSession session;
             string? role;
@@ -29,10 +29,10 @@ namespace MancalaServer
 
                 if(!session.isPublic) 
                 {continue;}
-                if(GameManager.Sessions[sessionId].AddPlayer(Context.ConnectionId))
+                if(GameManager.Sessions[sessionId].AddPlayer(Context.ConnectionId, nickname))
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);
-                    GameManager.Sessions[sessionId].AddPlayer(Context.ConnectionId);
+                    GameManager.Sessions[sessionId].AddPlayer(Context.ConnectionId, nickname);
                     role = session.GetPlayerRole(Context.ConnectionId);
                     await Clients.Caller.SendAsync("sessionID", sessionId);
                     await Clients.Caller.SendAsync("Role", role);
@@ -40,6 +40,9 @@ namespace MancalaServer
                     if (session.Player1 != null && session.Player2 != null)
                     {
                         await Clients.Group(sessionId).SendAsync("GameState", string.Join(",", session.GameState)+",");
+                        await Clients.Group(sessionId).SendAsync("Nicknames", GameManager.Sessions[sessionId].Player1Nickname
+                                                                                +","
+                                                                                +GameManager.Sessions[sessionId].Player2Nickname);
                     }
                     return;
                 }
@@ -49,20 +52,20 @@ namespace MancalaServer
             session = new GameSession(sessionId2, true);
             GameManager.Sessions[sessionId2] = session;
             await Groups.AddToGroupAsync(Context.ConnectionId, sessionId2);
-            session.AddPlayer(Context.ConnectionId);
+            session.AddPlayer(Context.ConnectionId, nickname);
             role = session.GetPlayerRole(Context.ConnectionId);
             await Clients.Caller.SendAsync("sessionID", sessionId2);
             await Clients.Caller.SendAsync("Role", role);
             await Clients.Caller.SendAsync("WaitingForOpponent", sessionId2);
         }
-        public async Task JoinGame(string sessionId)
+        public async Task JoinGame(string sessionId, string nickname="Anonymous")
         {
             if (!GameManager.Sessions.TryGetValue(sessionId, out var session))
             {
                 await Clients.Caller.SendAsync("Error", "Game doesn't exist");
                 return;
             }
-            if (!session.AddPlayer(Context.ConnectionId))
+            if (!session.AddPlayer(Context.ConnectionId, nickname))
             {
                 await Clients.Caller.SendAsync("Error", "Game full");
                 return;
@@ -70,16 +73,19 @@ namespace MancalaServer
 
             await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);
 
-            session.AddPlayer(Context.ConnectionId);
+            session.AddPlayer(Context.ConnectionId, nickname);
             var role = session.GetPlayerRole(Context.ConnectionId);
             await Clients.Caller.SendAsync("Role", role);
 
             if (session.Player1 != null && session.Player2 != null)
             {
+                await Clients.Group(sessionId).SendAsync("Nicknames", GameManager.Sessions[sessionId].Player1Nickname
+                                                                            +","
+                                                                            +GameManager.Sessions[sessionId].Player2Nickname);
                 await Clients.Group(sessionId).SendAsync("GameState", string.Join(",", session.GameState)+",");
             }
         }
-        public async Task CreateGame(string sessionID, string publicity)
+        public async Task CreateGame(string sessionID, string publicity, string nickname="Anonymous")
         {
             string sessionId = sessionID == "" ? Guid.NewGuid().ToString("N").Substring(0, 32) : sessionID;
             if(GameManager.Sessions.ContainsKey(sessionId))
@@ -87,7 +93,7 @@ namespace MancalaServer
             while(GameManager.Sessions.ContainsKey(sessionId)) sessionId = Guid.NewGuid().ToString("N").Substring(0, 32);
             GameSession session = new GameSession(sessionId, publicity == "True");
             GameManager.Sessions[sessionId] = session;
-            session.AddPlayer(Context.ConnectionId);
+            session.AddPlayer(Context.ConnectionId, nickname);
             await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);
             var role = session.GetPlayerRole(Context.ConnectionId);
             await Clients.Caller.SendAsync("sessionID", sessionId);

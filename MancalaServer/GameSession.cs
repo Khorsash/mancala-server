@@ -67,6 +67,8 @@ namespace MancalaServer
         public string SessionId { get; }
         public string? Player1 { get; private set; }
         public string? Player2 { get; private set; }
+        public string? Player1Nickname {get; private set;}
+        public string? Player2Nickname {get; private set;}
         public int[] GameState { get; private set; }
         public bool IsGameOver { get; private set; }
         public bool isPublic {get; private set;}
@@ -79,16 +81,18 @@ namespace MancalaServer
             IsGameOver = false;
         }
 
-        public bool AddPlayer(string connectionId)
+        public bool AddPlayer(string connectionId, string nickname="Anonymous")
         {
             if (Player1 == null)
             {
                 Player1 = connectionId;
+                Player1Nickname = nickname;
                 return true;
             }
             else if (Player2 == null)
             {
                 Player2 = connectionId;
+                Player2Nickname = nickname;
                 return true;
             }
             return false;
